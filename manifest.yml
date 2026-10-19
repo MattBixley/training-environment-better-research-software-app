@@ -1,0 +1,9 @@
+---
+name: Better Research Software
+category: Interactive Apps
+subcategory: Servers
+role: batch_connect
+description: |
+  VS Code in the browser, set up for the Carpentries "Building Better Research
+  Software" lesson: Python, venv, git, SSH and the GitHub CLI, with the
+  spacewalks example project in your home directory.

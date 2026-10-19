@@ -1,0 +1,13 @@
+<form id="<%= form_id %>" action="/rnode/<%= host %>/<%= port %>/login?to=" method="post" target="_blank">
+  <input type="hidden" name="password" value="<%= password %>">
+  <button class="btn btn-primary" type="submit">
+    <i class="fa fa-code"></i> Connect to VS Code
+  </button>
+</form>
+<p class="help-block" style="margin-top: 0.75em">
+  <i class="fa fa-info-circle"></i>
+  VS Code opens the <code>spacewalks</code> project in your home directory.
+  Follow along with the
+  <a href="https://carpentries-incubator.github.io/better-research-software/" target="_blank">Building Better Research Software</a>
+  lesson. A fresh copy of the project is at <code>/opt/spacewalks</code>.
+</p>

@@ -1,0 +1,128 @@
+#
+name: Create and publish a Docker image
+
+on:
+  push:
+  workflow_dispatch:
+
+# Defines two custom environment variables for the workflow. These are used for the Container registry domain, and a name for the Docker image that this workflow builds.
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+# There is a single job in this workflow. It's configured to run on the latest available version of Ubuntu.
+jobs:
+
+  # The image tag inside submit.yml.erb is what a deployed session actually
+  # runs. It is easy to miss on release, and the training-environment config's
+  # `k8s_container` does NOT override it - that value only feeds the pod
+  # pre-puller. A mismatch means the cluster silently runs an old image.
+  check-submit-image-tag:
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: submit.yml.erb must pin this release's tag
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          pinned=$(grep -oE 'training-environment-better-research-software-app:[^"]+' submit.yml.erb | cut -d: -f2)
+          echo "git tag            : $tag"
+          echo "submit.yml.erb pins: $pinned"
+          if [ "$pinned" != "$tag" ]; then
+            echo "::error file=submit.yml.erb::pins $pinned but this release is $tag."
+            echo "  A session would run the wrong image. Update the image: line and re-tag."
+            exit 1
+          fi
+          echo "ok: they match"
+
+
+  # Open OnDemand's dashboard reads form.yml with `YAML.safe_load(contents)` and
+  # no `aliases: true`. Anything it cannot parse takes the app off the dashboard
+  # entirely - no error, no broken tile, the workshop is simply not there, and
+  # the next person to find out is whoever opens the training environment.
+  # v0.4.0 through v0.5.1 shipped a YAML anchor and were missing for that reason.
+  check-app-config:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: form.yml and manifest.yml must parse the way OnDemand parses them
+        run: |
+          ruby -ryaml -e '
+            fail = false
+            %w[form.yml manifest.yml].each do |f|
+              begin
+                YAML.safe_load(File.read(f))
+                puts "ok: #{f}"
+              rescue => e
+                puts "::error file=#{f}::#{e.class}: #{e.message}"
+                puts "  The dashboard uses safe_load, so the app would not appear at all."
+                puts "  YAML anchors and aliases are the usual cause - write the value out in full."
+                fail = true
+              end
+            end
+            exit 1 if fail
+          '
+
+  # The staged template scripts must keep their executable bit. Open OnDemand
+  # renders script.sh.erb into the job directory preserving its mode and then
+  # runs it, so a file committed as 644 fails at session launch with
+  # "Permission denied" - and nothing before that point notices.
+  check-template-permissions:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: template/*.erb must be executable
+        run: |
+          fail=0
+          for f in template/before.sh.erb template/script.sh.erb; do
+            mode=$(git ls-files -s "$f" | cut -d' ' -f1)
+            if [ "$mode" != "100755" ]; then
+              echo "::error file=$f::$f is mode $mode, expected 100755."
+              echo "  Fix with: git update-index --chmod=+x $f"
+              fail=1
+            else
+              echo "ok: $f is $mode"
+            fi
+          done
+          exit $fail
+
+  # The image is only pushed once every check has passed. check-submit-image-tag
+  # is skipped on branch pushes, so a skipped check still lets the build run.
+  build-and-push-image:
+    needs: [check-submit-image-tag, check-app-config, check-template-permissions]
+    if: ${{ !failure() && !cancelled() }}
+    runs-on: ubuntu-latest
+    # Sets the permissions granted to the `GITHUB_TOKEN` for the actions in this job.
+    permissions:
+      contents: read
+      packages: write
+      # 
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      # Uses the `docker/login-action` action to log in to the Container registry registry using the account and password that will publish the packages. Once published, the packages are scoped to the account defined here.
+      - name: Log in to the Container registry
+        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      # This step uses [docker/metadata-action](https://github.com/docker/metadata-action#about) to extract tags and labels that will be applied to the specified image. The `id` "meta" allows the output of this step to be referenced in a subsequent step. The `images` value provides the base name for the tags and labels.
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+      # This step uses the `docker/build-push-action` action to build the image, based on your repository's `Dockerfile`. If the build succeeds, it pushes the image to GitHub Packages.
+      # It uses the `context` parameter to define the build's context as the set of files located in the specified path. For more information, see "[Usage](https://github.com/docker/build-push-action#usage)" in the README of the `docker/build-push-action` repository.
+      # It uses the `tags` and `labels` parameters to tag and label the image with the output from the "meta" step.
+      - name: Build and push Docker image
+        uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
+        with:
+          context: docker
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}

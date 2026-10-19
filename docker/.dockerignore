@@ -1,0 +1,19 @@
+# Build and test droppings from local runs. Without this they are copied into
+# the image, and a stale build/ directory can shadow the real sources.
+**/__pycache__/
+**/*.pyc
+**/.pytest_cache/
+**/*.egg-info/
+**/build/
+**/dist/
+**/.mypy_cache/
+**/.ruff_cache/
+
+# macOS. notebooks/ and examples/ are copied wholesale into the image and then
+# rsynced into the learner's home directory, so a stray .DS_Store would end up
+# visible in their JupyterLab file browser.
+**/.DS_Store
+**/._*
+**/__MACOSX/
+**/.Spotlight-V100
+**/.Trashes

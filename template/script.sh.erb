@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+
+# send all output to pod.log
+exec &> >(tee -a "${LOG_DIR}/pod.log")
+
+echo "TIMING - Starting main script at: $(date)"
+
+# Set working directory to home directory
+cd "${HOME}"
+
+# ---------------------------------------------------------------------------
+# Spacewalks, the lesson's example project
+#
+# Copied once, on first start, and never refreshed: learners rename, delete and
+# git-commit these files as the lesson goes, so merging the image copy back in
+# would undo their work. A clean copy stays at /opt/spacewalks.
+# ---------------------------------------------------------------------------
+if [[ ! -e "${HOME}/spacewalks" ]]; then
+    cp -a /opt/spacewalks "${HOME}/spacewalks"
+    echo "Copied the spacewalks project to ${HOME}/spacewalks"
+fi
+
+# ---------------------------------------------------------------------------
+# VS Code
+#
+# Extensions baked into the image are copied into the user's own extensions
+# directory, never overwriting what is there, so learners can add and update
+# their own. Default settings are only written when the user has none.
+# ---------------------------------------------------------------------------
+CODE_SERVER_DATAROOT="${HOME}/.local/share/code-server"
+mkdir -p "${CODE_SERVER_DATAROOT}/extensions" "${CODE_SERVER_DATAROOT}/User"
+rsync --ignore-existing -a /opt/code-server/extensions/ "${CODE_SERVER_DATAROOT}/extensions/"
+if [[ ! -f "${CODE_SERVER_DATAROOT}/User/settings.json" ]]; then
+    cp /opt/code-server/settings.json "${CODE_SERVER_DATAROOT}/User/settings.json"
+fi
+
+echo "TIMING - Starting code-server at: $(date)"
+
+exec code-server \
+    --auth="password" \
+    --bind-addr="0.0.0.0:8443" \
+    --disable-telemetry \
+    --disable-update-check \
+    --user-data-dir="${CODE_SERVER_DATAROOT}" \
+    --extensions-dir="${CODE_SERVER_DATAROOT}/extensions" \
+    "${HOME}/spacewalks"
