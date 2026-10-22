@@ -26,13 +26,17 @@ fi
 # Extensions baked into the image are copied into the user's own extensions
 # directory, never overwriting what is there, so learners can add and update
 # their own. Default settings are only written when the user has none.
+# Machine settings are rewritten on every start and override User settings,
+# so they also reach homes that already have a settings.json (e.g. inlay
+# hints, which otherwise fill the editor with soft-added type hints).
 # ---------------------------------------------------------------------------
 CODE_SERVER_DATAROOT="${HOME}/.local/share/code-server"
-mkdir -p "${CODE_SERVER_DATAROOT}/extensions" "${CODE_SERVER_DATAROOT}/User"
+mkdir -p "${CODE_SERVER_DATAROOT}/extensions" "${CODE_SERVER_DATAROOT}/User" "${CODE_SERVER_DATAROOT}/Machine"
 rsync --ignore-existing -a /opt/code-server/extensions/ "${CODE_SERVER_DATAROOT}/extensions/"
 if [[ ! -f "${CODE_SERVER_DATAROOT}/User/settings.json" ]]; then
     cp /opt/code-server/settings.json "${CODE_SERVER_DATAROOT}/User/settings.json"
 fi
+cp /opt/code-server/machine-settings.json "${CODE_SERVER_DATAROOT}/Machine/settings.json"
 
 echo "TIMING - Starting code-server at: $(date)"
 

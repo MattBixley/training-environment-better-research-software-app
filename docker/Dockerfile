@@ -107,6 +107,7 @@ RUN chmod 0644 /etc/ssh/ssh_config.d/github.conf /etc/ssh/ssh_known_hosts \
     && ssh-keygen -lf /etc/ssh/ssh_known_hosts | grep -q "SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU"
 
 COPY code-server/settings.json /opt/code-server/settings.json
+COPY code-server/machine-settings.json /opt/code-server/machine-settings.json
 
 
 # `code` is what the lesson's setup check runs (`code --version`,

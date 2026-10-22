@@ -61,6 +61,20 @@ Do not "fix" these in the image:
 
 ## Notes for instructors
 
+- **Prerequisite: a GitHub account.** It is the only thing learners need
+  before the workshop. Send them
+  <https://docs.github.com/en/account-and-profile/how-tos/account-management/creating-an-account-on-github>.
+- **Allow ~15 minutes at the start** to configure git (`user.name`,
+  `user.email`), generate an SSH key and add it to GitHub.
+- **Copy and paste from the lesson page.** VS Code reads the system
+  clipboard through the browser, and browser privacy settings can block it
+  (as with the VNC desktop apps). `Ctrl+V`/`Ctrl+Shift+V` usually still work;
+  right-click Paste needs clipboard permission. If pasting fails, allow
+  Clipboard for the session's site in the browser's site settings, or
+  install the page as an app from the browser menu.
+- **Inlay hints are off.** `editor.inlayHints.enabled` is set to
+  `offUnlessPressed` in the Machine settings, which override User settings
+  and are rewritten on every launch. Hold `Ctrl+Alt` to show the hints.
 - **Episode 2 remote URL typo.** The lesson shows
   `git remote add origin git@github.com/<handle>/spacewalks.git`. The correct
   form uses a colon: `git@github.com:<handle>/spacewalks.git`.
@@ -99,6 +113,7 @@ away when the container stops.
 |---|---|
 | `docker/Dockerfile` | Ubuntu 24.04 image: code-server, extensions, git, gh, wheelhouse, spacewalks |
 | `docker/code-server/settings.json` | Default VS Code settings, written only if the learner has none |
+| `docker/code-server/machine-settings.json` | Enforced VS Code settings, rewritten every launch (override User settings) |
 | `docker/ssh/` | GitHub over port 443, pinned GitHub host keys |
 | `template/before.sh.erb` | Picks the port and generates the session password |
 | `template/script.sh.erb` | Stages spacewalks, extensions and settings, then starts code-server |

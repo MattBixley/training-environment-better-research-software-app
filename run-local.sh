@@ -94,10 +94,11 @@ COMMON=(
 # Mirror what template/script.sh.erb does on the cluster, so the session you
 # see locally has the same contents as the deployed one.
 STAGE='
-    mkdir -p "${HOME}/.local/share/code-server/User"
+    mkdir -p "${HOME}/.local/share/code-server/User" "${HOME}/.local/share/code-server/Machine"
     [[ -e "${HOME}/spacewalks" ]] || cp -a /opt/spacewalks "${HOME}/spacewalks"
     rsync --ignore-existing -a /opt/code-server/extensions/ "${HOME}/.local/share/code-server/extensions/"
     cp -n /opt/code-server/settings.json "${HOME}/.local/share/code-server/User/settings.json" || true
+    cp /opt/code-server/machine-settings.json "${HOME}/.local/share/code-server/Machine/settings.json"
     cd "${HOME}"
 '
 
